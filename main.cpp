@@ -1,11 +1,16 @@
+// compile with g++ -IC:\\boost\\include\boost-1_71\\ -o main.exe main.cpp
+
 #include <stdio.h>      
 #include <iostream>   
 #include <windows.h>    
 #include <string>
 #include <sstream>
-#include <boost/interprocess/shared_memory_object.hpp>
 
-#define concat(first, second) first second
+#include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/mapped_region.hpp>
+
+#define concat(first, second) first second  // to create cmd commands
+
 
 class secret{
     private:
@@ -31,12 +36,8 @@ class secret{
 };
 
 void call_attempt_access(int * ptr){
-    // std::string address = "00";                                         //std::string(&s.public_number);
-    // char * address = "00".c_str();
     char command[10] = ""; 
     strcat(command, "attempt_access.exe ");
-
-    // std::string address = "00";                             // WORKING
 
     std::stringstream ss;
     ss << ptr;  
@@ -44,14 +45,10 @@ void call_attempt_access(int * ptr){
 
     strcat(command, (address.c_str()));
     
-    
-    //command = "attempt_access.exe 00";
-    //std::cout << command << (command == "attempt_access.exe 00") << std::endl;
-
-    int status = system(command);                                       // gives a segmentation fault (returns -1073741819) if called with for example 0
+    int status = system(command);  // gives a segmentation fault (returns -1073741819) if called with for example 0
 
     if (status == -1073741819){
-        std::cout << "Segmentation fault. Invalid address.\n";
+        std::cout << "Segmentation fault. Invalid address.\n \n";
     }
 }
 
@@ -63,6 +60,39 @@ int main(){
     printf("\n\n");
 
     /////////////////////////////////////////////////////////
+    // Create shared memory
+    boost::interprocess::shared_memory_object shared_memory(
+        boost::interprocess::open_or_create, 
+        "shared_memory", 
+        boost::interprocess::read_write
+    );
+    // Set size
+    shared_memory.truncate(8);
+
+    printf("Created shared memory. \n \n");
+
+    // Map the shared_memory in this process
+    boost::interprocess::mapped_region region(shared_memory, boost::interprocess::read_write);
+
+    // Reset memory to all ones
+    std::memset(region.get_address(), 16, region.get_size());
+
+
+    printf("Mapped shared memory in main process. \n \n");
+
+    // TO PRINT ALL MEMORY
+    char *mem = static_cast<char*>(region.get_address());
+    for(std::size_t i = 0; i < region.get_size(); ++i){
+        printf("%08x: %08x\n", mem, *mem);
+        mem++;
+    }
+
+    printf("Region start: %08x \n", region.get_address());
+    printf("Region size:  %i   \n", region.get_size());
+    printf("Finished memory tests. \n \n");
+
+
+    /////////////////////////////////////////////////////////
     int a          = 3;
     int * a_ptr    = &a;
     printf("a           : %08x\n", a);
@@ -70,7 +100,14 @@ int main(){
     printf("a_ptr       : %08x\n", a_ptr);
     printf("*a_ptr      : %08x\n", *a_ptr);
     printf("\n\n");
+
     /////////////////////////////////////////////////////////
+
+    mem = static_cast<char*>(region.get_address());
+    for(std::size_t i = 0; i < region.get_size(); ++i){
+        printf("%08x: %08x\n", mem, *mem);
+        mem++;
+    }
 
     /////////////////////////////////////////////////////////
     secret s;
@@ -97,6 +134,9 @@ int main(){
 
     // time the cache 
 
+    // Delete shared memory
+    boost::interprocess::shared_memory_object::remove("shared_memory");
+    printf("Deleted shared memory. \n \n");
 
     printf("\n\n");
     printf("--------------------------------\n");
