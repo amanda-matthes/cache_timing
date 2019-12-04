@@ -16,13 +16,21 @@ int main(int argc, char *argv[]){
     // Map the shared_memory in this process
     boost::interprocess::mapped_region region(shared_memory, boost::interprocess::read_write);
 
+    printf("Started attempt_access.exe\n");
 
     printf("Let's first check out the shared memory\n");
-    char *mem = static_cast<char*>(region.get_address());
-    for(std::size_t i = 0; i < region.get_size(); ++i){
+    printf("--------------------------------\n");
+    printf("SHARED MEMORY\n");
+    printf("Region start: %08x \n", region.get_address());
+    printf("Region size:  %i   \n", region.get_size());
+
+    printf("Memory  : Value\n");
+    int *mem = static_cast<int*>(region.get_address());
+    for(std::size_t i = 0; i < region.get_size()/sizeof(int); ++i){
         printf("%08x: %08x\n", mem, *mem);
         mem++;
     }
+    printf("--------------------------------\n \n");
 
     printf("Now let's try to access the requested location\n");
 
@@ -34,8 +42,8 @@ int main(int argc, char *argv[]){
 
     printf("Memory  : Value\n");
     for (int i = 0; i < 10; i++) {
-        printf("%08x: %08x\n", ptr, *ptr);
-        ptr = ptr + 8;
+        printf("%08x : %08x\n", ptr, *ptr);
+        ptr++;
     }  
 
     printf("done. no segmentation faults.\n");
