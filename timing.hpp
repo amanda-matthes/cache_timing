@@ -7,7 +7,7 @@ __int64 CounterStart = 0;
 void StartCounter(){
     LARGE_INTEGER li;
 
-    PCFreq = float(li.QuadPart)/10000.0;
+    PCFreq = float(li.QuadPart);
 
     QueryPerformanceCounter(&li);
     CounterStart = li.QuadPart;

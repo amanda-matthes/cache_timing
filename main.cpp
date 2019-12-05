@@ -6,14 +6,17 @@
 #include <string>
 #include <sstream>
 #include <chrono>
+#include <stdlib.h>
 
 #include "timing.hpp"
-
+#include <time.h>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 
 #define concat(first, second) first second  // to create cmd commands
 
+const long int size = 65536*2;
+const int secret_max  = 10; 
 
 class secret{
 private:
@@ -34,7 +37,7 @@ public:
         printf("&public_number: %08x \n", &(*this).public_number);
         printf("secret_number : %08x \n", (*this).secret_number);
         printf("&secret_number: %08x \n", &(*this).secret_number);
-                
+
         printf("---------------------\n");
     }
 };
@@ -72,28 +75,66 @@ void call_attempt_access(std::string ptr){
     }
 }
 
-std::vector<int> garbage_bag; // collects outputs to make sure that they do not get optimized away
+volatile int garbage_bag[RAND_MAX]; // collects outputs to make sure that they do not get optimized away
 void save(int number){
-    garbage_bag.push_back(number);
+    garbage_bag[rand()] = number;
 }
 
 
-std::string do_stuff_with_large_arrays(){ // returns rubbish
+void do_stuff_with_large_arrays(){ 
     // do stuff to "clear" the cache
     const int size = 65536*2*2; 
-    int trash [size];
+    volatile int trash [size];
     trash[0] = 13;
     for (int i = 1; i < size; i++) {
         trash[i] = (trash[i-1] * trash[i-1])%3400;
     }
-    if(trash[size-1] == 123){ // this is just to make sure that the computations are not optimised away by the compiler
-        return "garbage";
-    } else{
-        return "";
+    save(trash[size-1]);
+    for (int i = 2; i < size; i++) {
+        trash[i] = (trash[i-2] * trash[i-2])%231;
     }
+    save(trash[size-1]);
+    for (int i = 3; i < size; i++) {
+        trash[i] = (trash[i-3] * trash[i-3])%1001;
+    }
+    save(trash[size-1]);
 }
 
+void flush(int * array){
+    garbage_bag[rand()] = array[(rand()*4)%size];
+    garbage_bag[rand()] = array[(rand()*4)%size];
+    garbage_bag[rand()] = array[(rand()*4)%size];
+    garbage_bag[rand()] = array[(rand()*4)%size];
+}
+
+int getMinIndex(float * array, int size){
+    int min = 0;
+    for (int i = 0; i < size; i++) {
+        if(array[i] < array[min]){
+            min = i;
+        }
+    }
+    return min;
+}
+int getMaxIndex(int * array, int size){
+    int max = 0;
+    for (int i = 0; i < size; i++) {
+        if(array[i] > array[max]){
+            max = i;
+        }
+    }
+    return max;
+}
+int getMostCommonValue(int * array, int size){
+    int counters[secret_max];
+
+    for(int i = 0; i < secret_max; i++){counters[i] = 0;}  // initialise
+    for(int i = 0; i < size; i++){counters[array[i]]++;}   // count
+
+    return getMaxIndex(counters, secret_max);
+}
 int main(){
+    srand (time(NULL));
     printf("\n\n");
     printf("--------------------------------\n");
     printf("START\n");
@@ -207,68 +248,110 @@ int main(){
 
     printf("----------------------------------------------------------------\n");
     printf("Let's play around with the cache \n \n");
-    StartCounter(); EndCounter();
+    StartCounter(); std::cout << EndCounter() << std::endl;
 
-    unsigned char secret = 42;  // unsigned char to keep things simple
+    volatile unsigned char secret = 7;  // unsigned char to keep things simple
 
-    const long int size = 65536*2;
+
     int playground [size];     // playground is now a pointer to the first element
-    for(int i = 0; i < size; i++){playground[i] = 0;} // initialise
-
-    // now playground[size-1] should be in the cache. Let's try to time access to it
+    for(int i = 0; i < size; i++){playground[i] = rand();} // initialise
 
 
-    StartCounter();    
-    // std::cout << playground[size-1] << std::endl;
-    save(playground[size-1]);
-    std::cout << "Cache hit : " << EndCounter() << std::endl;
+    volatile int index1 = size/10;
+    volatile int index2 = size/3; //index1 + 8192;
 
-
-    StartCounter();
-    // std::cout << playground[3000] << std::endl;
-    save(playground[30000]);
-    std::cout << "Cache miss: " << EndCounter() << std::endl;
-
-
-    // So I found out that a time of >0.0001 means cache miss 
-
-    do_stuff_with_large_arrays();
+    flush(playground);
     std::cout << "\nFlushed the cache.\n" << std::endl;
 
-    StartCounter();    
-    save(playground[size-1]);
-    std::cout << "Cache miss: " << EndCounter() << std::endl;
+    StartCounter();
+    garbage_bag[rand()] = playground[index1];
+
+    std::cout << "Expected cache miss: " << EndCounter() << std::endl;
+
+    garbage_bag[rand()] = playground[index1];
+    garbage_bag[rand()] = playground[index1];
+
 
     StartCounter();
-    save(playground[30000]);
-    std::cout << "Cache miss: " << EndCounter() << std::endl;
+    garbage_bag[rand()] = playground[index1];
 
-    printf("So the difference is quite obvious.\n");
+    std::cout << "Expected cache hit : " << EndCounter() << std::endl;
 
-    printf("----------------------------------------------------------------\n");
+
+    flush(playground);
+    std::cout << "\nFlushed the cache.\n" << std::endl;
+
+
+    StartCounter();    
+    garbage_bag[rand()] = playground[index2];
+
+    std::cout << "Expected cache miss: " << EndCounter() << std::endl;
+
+    garbage_bag[rand()] = playground[index2];
+    garbage_bag[rand()] = playground[index2];
+
+
+    StartCounter();
+    garbage_bag[rand()] = playground[index2];
+
+    std::cout << "Expected cache hit : " << EndCounter() << std::endl;
+
+    printf("\nSo the difference is there but not always. (Rerun a couple of times.) \nSo the cache is hard to trick.\n");
+
+    printf("-----------------------------------------------------\n");
 
     printf("Now, let's try to see if we can recreate our secret value from that.\n");
 
-    do_stuff_with_large_arrays();
+    flush(playground);
     std::cout << "\nFlushed the cache.\n" << std::endl;
 
-    save(playground[secret*512]);
 
-    for (int i = 0; i < 45; i++){
-        save(playground[secret*512]);
-        StartCounter();
-        save(playground[i*512]);
-        float time = EndCounter();
-        if (time < 0.0001){
-            std::cout << i <<" Bingo! " << std::endl;
-        } else{
-            std::cout << i <<" Nope. " << std::endl;
+    const int reps = 10;
+    float times[secret_max];
+    int guesses[reps];
+    volatile float time;
+
+
+    // for (int i = 0; i < secret_max; i++){times[i] = 0;}
+    
+    for (volatile int round = 0; round < reps; round++){
+        flush(playground);
+        for (volatile int i = 0; i < secret_max; i++){ 
+            flush(playground);
+            garbage_bag[rand()] = playground[(secret+1)*4096*2]; // playground[0] tends to always be cached
+
+            StartCounter();
+            garbage_bag[rand()] = playground[(i+1)*4096*2];
+            time = EndCounter();
+            times[i] = time; //times[i] += time;
         }
-    }
+        guesses[round] = getMinIndex(times, secret_max);
+
+        if(round == 1){
+            std::cout << "Example run" << std::endl;
+            for (int i = 0; i < secret_max; i++){
+                std::cout << "Accessing array at index [(" << i << "+1)*8192] took " << times[i] << std::endl;
+            }
+            std::cout << "Best guess this round: " << guesses[round] << std::endl;
+            std::cout << "Now do this a couple more times to make it significant. " << std::endl;
+        }
+    }    
+
+    std::cout << "The secret value is: " << getMostCommonValue(guesses, reps) << std::endl;
+    // for (int i = 0; i < max; i++){
+    //     float time = times[i];
+    //     std::cout << i << " " << time << std::endl;
+    //     // if (time < 0.0001){
+    //     //     std::cout << i <<" Bingo! " << time << std::endl;
+    //     // } else{
+    //     //     std::cout << i <<" Nope. " << time << std::endl;
+    //     // }        
+    // }
     
 
 
-    printf("----------------------------------------------------------------\n");
+    printf("-----------------------------------------------------\n");
+
 
     // std::cout << "This took " << time_access_in_ns(playground, size-1) << "ns\n"; 
     // std::cout << "This took " << time_access_in_ns(playground, 0) << "ns\n"; 
@@ -300,6 +383,12 @@ int main(){
     printf("DONE\n");
     printf("--------------------------------\n");
 
+    volatile int sum = 0;
+    for (auto i : garbage_bag){
+        sum += i;
+    }
+    std::cout << sum;
+    
     return 0;
 
 }
