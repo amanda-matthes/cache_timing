@@ -76,35 +76,32 @@ void call_attempt_access(std::string ptr){
 }
 
 volatile int garbage_bag[RAND_MAX]; // collects outputs to make sure that they do not get optimized away
-void save(int number){
-    garbage_bag[rand()] = number;
-}
-
 
 void do_stuff_with_large_arrays(){ 
     // do stuff to "clear" the cache
     const int size = 65536*2*2; 
     volatile int trash [size];
     trash[0] = 13;
-    for (int i = 1; i < size; i++) {
-        trash[i] = (trash[i-1] * trash[i-1])%3400;
+    for (volatile int i = 1; i < size; i++) {
+        trash[i] = (trash[i-1] * trash[i-1])%3400 + rand();
     }
-    save(trash[size-1]);
-    for (int i = 2; i < size; i++) {
-        trash[i] = (trash[i-2] * trash[i-2])%231;
-    }
-    save(trash[size-1]);
-    for (int i = 3; i < size; i++) {
-        trash[i] = (trash[i-3] * trash[i-3])%1001;
-    }
-    save(trash[size-1]);
+    garbage_bag[rand()] = trash[size-1];
 }
 
 void flush(int * array){
-    garbage_bag[rand()] = array[(rand()*4)%size];
-    garbage_bag[rand()] = array[(rand()*4)%size];
-    garbage_bag[rand()] = array[(rand()*4)%size];
-    garbage_bag[rand()] = array[(rand()*4)%size];
+    volatile bool temp = true; //rand()%2;
+    if(temp){
+        garbage_bag[rand()] = array[(rand()*4)%size];
+        garbage_bag[rand()] = array[(rand()*4)%size];
+        garbage_bag[rand()] = array[(rand()*4)%size];
+        garbage_bag[rand()] = array[(rand()*4)%size];
+    } else{
+        garbage_bag[rand()] = array[(rand()*4)%size];
+        garbage_bag[rand()] = array[(rand()*4)%size];
+        garbage_bag[rand()] = array[(rand()*4)%size];
+        garbage_bag[rand()] = array[(rand()*4)%size];
+    }
+    do_stuff_with_large_arrays();
 }
 
 int getMinIndex(float * array, int size){
@@ -140,7 +137,6 @@ int main(){
     printf("START\n");
     printf("--------------------------------\n");
     printf("\n\n");
-
     /**
     /////////////////////////////////////////////////////////
     // Create shared memory
@@ -248,12 +244,13 @@ int main(){
 
     printf("----------------------------------------------------------------\n");
     printf("Let's play around with the cache \n \n");
-    StartCounter(); std::cout << EndCounter() << std::endl;
+    StartCounter(); garbage_bag[rand()] = EndCounter();
 
     volatile unsigned char secret = 7;  // unsigned char to keep things simple
 
 
     int playground [size];     // playground is now a pointer to the first element
+
     for(int i = 0; i < size; i++){playground[i] = rand();} // initialise
 
 
@@ -313,7 +310,7 @@ int main(){
 
 
     // for (int i = 0; i < secret_max; i++){times[i] = 0;}
-    
+
     for (volatile int round = 0; round < reps; round++){
         flush(playground);
         for (volatile int i = 0; i < secret_max; i++){ 
@@ -325,16 +322,17 @@ int main(){
             time = EndCounter();
             times[i] = time; //times[i] += time;
         }
-        guesses[round] = getMinIndex(times, secret_max);
 
         if(round == 1){
             std::cout << "Example run" << std::endl;
             for (int i = 0; i < secret_max; i++){
                 std::cout << "Accessing array at index [(" << i << "+1)*8192] took " << times[i] << std::endl;
             }
-            std::cout << "Best guess this round: " << guesses[round] << std::endl;
             std::cout << "Now do this a couple more times to make it significant. " << std::endl;
         }
+        guesses[round] = getMinIndex(times, secret_max);
+        std::cout << "Best guess this round: " << guesses[round] << std::endl;
+
     }    
 
     std::cout << "The secret value is: " << getMostCommonValue(guesses, reps) << std::endl;
