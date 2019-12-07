@@ -1,6 +1,8 @@
 // compile with g++ -std=c++11 -o main.exe main.cpp
 
-#include <iomanip>      // for std::setw
+#include <iomanip>
+#include <sstream>
+#include <string> 
 #include "timing.hpp"
 
 const long int size     = 65536*2;
@@ -15,6 +17,27 @@ int getMaxIndex(int * array, int size);
 int getMostCommonValue(int * array, int size);
 
 
+void call_attempt_access(int * ptr){
+    char command[10] = ""; 
+    strcat(command, "attempt_access.exe ");
+
+    std::stringstream ss;
+    ss << ptr;  
+    std::string address = ss.str();
+
+    strcat(command, (address.c_str()));
+    
+    std::cout << "Calling attempt_access.exe" << std::endl;
+
+    int status = system(command);  // gives a segmentation fault (returns -1073741819) if called with for example 0
+
+    std::cout << "Exited with status " << status << std::endl;
+
+    if (status == -1073741819){
+        std::cout << "Segmentation fault. Invalid address.\n \n";
+    }
+}
+
 int main(){
     srand (time(NULL));
     printf("\n\n");
@@ -22,7 +45,6 @@ int main(){
     printf("START\n");
     printf("--------------------------------\n");
     printf("\n\n");
-
 
     printf("----------------------------------------------------------------\n");
     printf("Let's play around with the cache \n \n");
@@ -75,11 +97,27 @@ int main(){
 
     printf("Now, let's try to see if we can recreate a secret value from that.\n");
 
+    int secret = rand()%secret_max;  
+    std::cout << "Created random secret number between 0 and " << secret_max-1 << std::endl;
 
-    volatile int secret = rand()%secret_max;  
-    std::cout << "Created random secret number between 0 and " << secret_max << std::endl;
+    int * s_ptr = &secret;
 
+    DWORD oldProtect;
+    if(VirtualProtect(
+            s_ptr, 
+            sizeof(secret),
+            PAGE_NOACCESS,
+            &oldProtect
+        )){
+        std::cout << "Successfully called VirtualProtect" << std::endl;
+    } else{
+        std::cout << "VirtualProtect failed" << std::endl;
+    }
 
+    // std::cout << secret << std::endl; // This line will crash the program (cannot be caught with try and catch)
+
+    std::cout << "The secret now cannot be read anymore without TODO" << std::endl;
+    
     flush(playground);
     std::cout << "\nFlushed the cache.\n" << std::endl;
 
