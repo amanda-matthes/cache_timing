@@ -102,21 +102,6 @@ int main(){
 
     int * s_ptr = &secret;
 
-    DWORD oldProtect;
-    if(VirtualProtect(
-            s_ptr, 
-            sizeof(secret),
-            PAGE_NOACCESS,
-            &oldProtect
-        )){
-        std::cout << "Successfully called VirtualProtect" << std::endl;
-    } else{
-        std::cout << "VirtualProtect failed" << std::endl;
-    }
-
-    // std::cout << secret << std::endl; // This line will crash the program (cannot be caught with try and catch)
-
-    std::cout << "The secret now cannot be read anymore without TODO" << std::endl;
     
     flush(playground);
     std::cout << "\nFlushed the cache.\n" << std::endl;

@@ -55,6 +55,8 @@ int main(){
 
     std::cout << "The secret now cannot be read anymore without crashing the program." << std::endl;
 
+    // This can be reverted by calling VirtualProtect again with PAGE_NOACCESS. However we need the pointer for that which unfortunately, in this simple example, is also in the protected memory page. 
+
 
     printf("\n\n");
     printf("--------------------------------\n");

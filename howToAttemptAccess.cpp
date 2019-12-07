@@ -3,13 +3,15 @@
 #include <sstream>
 #include <iostream>   
 
+#include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/mapped_region.hpp>
 
 void call_attempt_access(int * ptr){
     char command[10] = ""; 
     strcat(command, "attempt_access.exe ");
 
     std::stringstream ss;
-    ss << ptr;  
+    ss << std::dec << (unsigned long long) ptr;  
     std::string address = ss.str();
 
     strcat(command, (address.c_str()));

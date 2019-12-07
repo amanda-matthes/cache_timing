@@ -5,6 +5,8 @@ things I learned
 - there is no (easy) way to somehow "catch" a seg fault. It will end your program
 - it is possible to share memory between processes using boost::interprocess
 - compilers are really good at optimising code to hide cache misses
+- how to call other executables 
+
 
 Conclusion:
 Computers are weird and I love it.
