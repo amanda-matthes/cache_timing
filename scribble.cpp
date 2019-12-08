@@ -1,20 +1,5 @@
 // compile with g++ -std=c++11 -IC:\\boost\\include\boost-1_71\\ -o scribble.exe scribble.cpp
 
-/*************************************
- * This is a simple example of how to use 
- * 
- * BOOL VirtualProtect(
- *   LPVOID lpAddress,
- *   SIZE_T dwSize,
- *   DWORD  flNewProtect,
- *   PDWORD lpflOldProtect
- * );
- * 
- * to change the protection of memory pages.
- * 
- * Source: https://docs.microsoft.com/en-gb/windows/win32/api/memoryapi/nf-memoryapi-virtualprotect?redirectedfrom=MSDN
- *************************************/
-
 #include <iomanip>      // for time(NULL)  
 #include <windows.h>    // for all the VirtualProtect stuff
 #include <iostream>     // for std::cout etc.

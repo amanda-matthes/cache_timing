@@ -36,7 +36,7 @@ int main(int argc, char *argv[]){
 
     // printf("Memory  : Value\n");
     // int *mem = static_cast<int*>(region.get_address());
-    // for(std::size_t i = 0; i < region.get_size()/sizeof(int); ++i){
+    // for(std::size_t i = 0; i < 10; ++i){
     //     printf("%08x: %08x\n", mem, *mem);
     //     mem++;
     // }
@@ -46,12 +46,13 @@ int main(int argc, char *argv[]){
 
     int * ptr = (int *) atoi(argv[1]);  // 0x0060fe10; //
 
-    // std::cout << "." << argv[2] << "." << std::endl;
     if (((std::string) argv[2]) == "true"){
+        int size = atoi(argv[3]); 
+        // std::cout << "Protection size: " <<  size << std::endl;
         DWORD oldProtect;
         if(VirtualProtect(
                 region.get_address(),           
-                region.get_size(),              
+                size,              
                 PAGE_NOACCESS,  // see Memory Protection Constants 
                 &oldProtect
             )){
@@ -60,19 +61,20 @@ int main(int argc, char *argv[]){
         }
     } 
 
-    printf("Starting at %08x aka %s\n", ptr, argv[1]);
+    bool verbose = (bool) atoi(argv[4]);
     
-    // Sleep(5000);      // wait 1min 
-
-    printf("Memory   : Value\n");
-    for (int i = 0; i < 10; i++) {
-        printf("%08x : %08x\n", ptr, *ptr);
-        ptr++;
-    }  
-
-    // printf("done. no segmentation faults.\n");
-
-    // printf("FINISHED ATTEMPT_ACCESS \n");
-    // printf("----------------------------\n");
-    // printf("----------------------------\n");
+    if(verbose==true) {
+        printf("Starting at %08x aka %s\n", ptr, argv[1]);
+        printf("Memory   : Value\n");  
+        for (int i = 0; i < 10; i++) {
+            printf("%08x : %08x\n", ptr, *ptr);
+            ptr++;
+        }  
+    } else{
+        int _;
+        for (int i = 0; i < 10; i++) {
+            _ = *ptr;
+            ptr++;
+        }  
+    }
 }
