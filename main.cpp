@@ -196,24 +196,30 @@ int main(){
         std::cout << "round " << round << std::endl;
         for (volatile int i = 0; i < secret_max; i++){ 
             flush(base, size);
+            call_attempt_access(
+                base + ((*secret_ptr) * 4096 * 2), 
+                true, sizeof(int), false);
 
-            call_attempt_access((int * ) ((*secret_ptr + 1) * 4096 * 2), true, sizeof(int), false);
             StartCounter();
-            garbage_bag[rand()] = playground[(i+1)*4096*2];
+            call_attempt_access(
+                base + (i * 4096 * 2), 
+                true, sizeof(int), false);
+            // garbage_bag[rand()] = playground[(i+1)*4096*2];
             time = EndCounter();
+            
             times[i] = time; //times[i] += time;
         }
 
         guesses[round] = getMinIndex(times, secret_max);
         if(round == 0){
-            std::cout << "Example run" << std::endl;
-            std::cout << "Before each of these accesses we call [(secret+1)*81292].\nWe will never look at that value but we can reconstruct it, \nbecause we know that it will be in the cache." << std::endl;
-            for (int i = 0; i < secret_max; i++){
-                std::cout << "Accessing array at index [(" << i << "+1)*8192] took " << std::setw(12) << times[i] << " time units " << std::endl;
-            }
-            std::cout << "A shorter time means that it was most likely in the cache. " << std::endl;
-            std::cout << "So the best guess for the secret value this round is: " << guesses[round] << std::endl;
-            std::cout << "Now do this a couple more times to make it significant. " << std::endl;
+            // std::cout << "Example run" << std::endl;
+            // std::cout << "Before each of these accesses we call [(secret+1)*81292].\nWe will never look at that value but we can reconstruct it, \nbecause we know that it will be in the cache." << std::endl;
+            // for (int i = 0; i < secret_max; i++){
+            //     std::cout << "Accessing array at index [(" << i << "+1)*8192] took " << std::setw(12) << times[i] << " time units " << std::endl;
+            // }
+            // std::cout << "A shorter time means that it was most likely in the cache. " << std::endl;
+            // std::cout << "So the best guess for the secret value this round is: " << guesses[round] << std::endl;
+            // std::cout << "Now do this a couple more times to make it significant. " << std::endl;
         } else {
         std::cout << "Best guess this round: " << guesses[round] << std::endl;
         }
