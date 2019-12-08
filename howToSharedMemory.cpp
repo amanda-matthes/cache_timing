@@ -1,5 +1,18 @@
 // compile with g++ -std=c++11 -IC:\\boost\\include\boost-1_71\\ -o howToSharedMemory.exe howToSharedMemory.cpp
 
+/*************************************
+ * This is a simple example of how to use the boost 
+ * library "interprocess" to create virtual memory that 
+ * can be used in more than one process.
+ * 
+ * This can be used to "recover" from a segmentation
+ * fault by placing the memory access in a separate 
+ * process and call it from the main one. If the 
+ * subprocess crashes because of a seg fault, the main
+ * process can resume without losing the virtual memory.
+ * 
+ *************************************/
+
 #include <stdio.h>      
 #include <iostream>   
 #include <windows.h>    
@@ -92,21 +105,6 @@ int main(){
     // Map the shared_memory in this process
     boost::interprocess::mapped_region region(shared_memory, boost::interprocess::read_write);
     **/
-
-    /////////////////////////////////////////////////////////
-
-    printf("--------------------------------\n");
-    printf("SHARED MEMORY\n");
-    printf("Region start: %08x \n", region.get_address());
-    printf("Region size:  %i   \n", region.get_size());
-
-    printf("Memory  : Value\n");
-    mem = static_cast<int*>(region.get_address());
-    for(std::size_t i = 0; i < region.get_size()/sizeof(int); ++i){
-        printf("%08x: %08x\n", mem, *mem);
-        mem++;
-    }
-    printf("--------------------------------\n \n");
 
     /////////////////////////////////////////////////////////
 
