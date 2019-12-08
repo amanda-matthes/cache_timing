@@ -1,6 +1,0 @@
-things I learned 
-
-- private members are not really private at all if you know their memory location (which turns out to be right next to the public ones)
-- there is no (easy) way to somehow "catch" a seg fault. It will end your program
-- it is possible to share memory between processes using boost::interprocess
-- compilers are really good at optimising code to hide cache misses

@@ -3,43 +3,45 @@
 #include <iomanip>      // for std::setw
 #include "timing.hpp"
 
-const long int size     = 65536*2;
 const int secret_max    = 10; 
+
+const long int size     = 65536*2;
+int playground [size];
+
 
 volatile int garbage_bag[RAND_MAX]; // collects outputs to make sure that they do not get optimized away
 
 void do_stuff_with_large_arrays();
-void flush(int * array);
+void flush();
 int getMinIndex(float * array, int size);
 int getMaxIndex(int * array, int size);
-int getMostCommonValue(int * array, int size);
+int getMostCommonValue(volatile int * array, int size);
 
 
 int main(){
-    srand (time(NULL));
     printf("\n\n");
     printf("--------------------------------\n");
     printf("START\n");
     printf("--------------------------------\n");
     printf("\n\n");
 
+    srand (time(NULL));                                     // set new seed
+    for(int i = 0; i < size; i++){playground[i] = rand();}  // initialise playground array
 
-    printf("----------------------------------------------------------------\n");
-    printf("Let's play around with the cache \n \n");
     StartCounter();
     garbage_bag[rand()] = rand();
     std::cout << EndCounter() << " ignore this line" << std::endl; // reset counter. somehow necessary and for some reason needs to be printed to work  ¯\_(ツ)_/¯
 
+    printf("----------------------------------------------------------------\n");
+    printf("Let's play around with the cache \n \n");
 
-    int playground [size];     // playground is now a pointer to the first element
-
-    for(int i = 0; i < size; i++){playground[i] = rand();} // initialise
+       
 
 
     volatile int index1 = size/10;
     volatile int index2 = size/3; 
 
-    flush(playground);
+    flush();
     std::cout << "\nFlushed the cache.\n" << std::endl;
 
     StartCounter();
@@ -54,7 +56,7 @@ int main(){
     std::cout << "Expected cache hit : " << EndCounter() << std::endl;
 
 
-    flush(playground);
+    flush();
     std::cout << "\nFlushed the cache.\n" << std::endl;
 
 
@@ -80,20 +82,17 @@ int main(){
     std::cout << "Created random secret number between 0 and " << secret_max << std::endl;
 
 
-    flush(playground);
+    flush();
     std::cout << "\nFlushed the cache.\n" << std::endl;
 
-    const int reps = 20;
+    const int reps = 30;
     float times[secret_max];
-    int guesses[reps];
+    volatile int guesses[reps];
     volatile float time;
 
-
     for (volatile int round = 0; round < reps; round++){
-        flush(playground);
-
         for (volatile int i = 0; i < secret_max; i++){ 
-            flush(playground);
+            flush();
             garbage_bag[rand()] = playground[(secret+1)*4096*2]; // playground[0] tends to always be cached
 
             StartCounter();
@@ -105,18 +104,20 @@ int main(){
         guesses[round] = getMinIndex(times, secret_max);
         if(round == 0){
             std::cout << "Example run" << std::endl;
-            std::cout << "Before each of these accesses we call [(secret+1)*81292].\nWe will never look at that value but we can reconstruct it, \nbecause we know that it will be in the cache." << std::endl;
+            std::cout << "Before each of these accesses we call array[(secret+1)*81292] (The +1 is there because array[0] is almost always cached).\nWe will never look at that value but we can reconstruct it, \nbecause we know that it will be in the cache." << std::endl;
             for (int i = 0; i < secret_max; i++){
-                std::cout << "Accessing array at index [(" << i << "+1)*8192] took " << std::setw(12) << times[i] << " time units " << std::endl;
+                std::cout << "Accessing array[(" << i << "+1)*8192] took " << std::setw(12) << times[i] << " time units " << std::endl;
             }
             std::cout << "A shorter time means that it was most likely in the cache. " << std::endl;
             std::cout << "So the best guess for the secret value this round is: " << guesses[round] << std::endl;
             std::cout << "Now do this a couple more times to make it significant. " << std::endl;
+            std::cout << "Best guesses: " << guesses[round] << " ";
         } else {
-        std::cout << "Best guess this round: " << guesses[round] << std::endl;
+        std::cout << guesses[round] << " "; // not printing the guess results in more optimisation and worse predictions
         }
     }    
     int prediction = getMostCommonValue(guesses, reps);
+    std::cout << std::endl;
     std::cout << "The best guess overall is : " << prediction << std::endl;
     std::cout << "The real secret value is  : " << secret << std::endl;
 
@@ -146,8 +147,9 @@ int main(){
 
 }
 
-void do_stuff_with_large_arrays(){ 
-    // do stuff to "clear" the cache
+
+void flush(){
+    // Does lots of stuff to "clear" the cache.
     const int size = 65536*2*2; 
     volatile int trash [size];
     trash[0] = 13;
@@ -155,27 +157,14 @@ void do_stuff_with_large_arrays(){
         trash[i] = (trash[i-1] * trash[i-1])%3400 + rand();
     }
     garbage_bag[rand()] = trash[size-1];
-}
-
-void flush(int * array){
-    volatile bool temp = rand()%2;
-    if(temp){
-        garbage_bag[rand()] = array[(rand()*4+1)%size];
-        garbage_bag[rand()] = array[(rand()*4+1)%size];
-        garbage_bag[rand()] = array[(rand()*4+1)%size];
-        garbage_bag[rand()] = array[(rand()*4+1)%size];
-        garbage_bag[rand()] = array[(rand()*4+1)%size];
-    } else{
-        garbage_bag[rand()] = array[(rand()*4)%size];
-        garbage_bag[rand()] = array[(rand()*4)%size];
-        garbage_bag[rand()] = array[(rand()*4)%size];
-        garbage_bag[rand()] = array[(rand()*4)%size];
-        garbage_bag[rand()] = array[(rand()*4)%size];
+    for (volatile int i = 1; i < size; i++) {
+        trash[i] = (trash[i-1] * trash[i-1])%3400 + rand();
     }
-    do_stuff_with_large_arrays();
+    garbage_bag[rand()] = trash[size-1];
 }
 
 int getMinIndex(float * array, int size){
+    // Returns the array index with the lowest value.
     int min = 0;
     for (int i = 0; i < size; i++) {
         if(array[i] < array[min]){
@@ -185,6 +174,7 @@ int getMinIndex(float * array, int size){
     return min;
 }
 int getMaxIndex(int * array, int size){
+    //  Returns the array index with the highest value
     int max = 0;
     for (int i = 0; i < size; i++) {
         if(array[i] > array[max]){
@@ -193,7 +183,8 @@ int getMaxIndex(int * array, int size){
     }
     return max;
 }
-int getMostCommonValue(int * array, int size){
+int getMostCommonValue(volatile int * array, int size){
+    // Returns the most common value in an array that only contains ints between 0 and secret_max
     int counters[secret_max];
 
     for(int i = 0; i < secret_max; i++){counters[i] = 0;}  // initialise
