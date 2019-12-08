@@ -1,147 +1,203 @@
-// compile with g++ -IC:\\boost\\include\boost-1_71\\ -o main.exe main.cpp
+// compile with g++ -std=c++11 -o main.exe main.cpp
 
-#include <stdio.h>      
-#include <iostream>   
-#include <windows.h>    
-#include <string>
-#include <sstream>
+#include <iomanip>      // for std::setw
+#include "timing.hpp"
 
-#include <boost/interprocess/shared_memory_object.hpp>
-#include <boost/interprocess/mapped_region.hpp>
+const long int size     = 65536*2;
+const int secret_max    = 10; 
 
-#define concat(first, second) first second  // to create cmd commands
+volatile int garbage_bag[RAND_MAX]; // collects outputs to make sure that they do not get optimized away
 
+void do_stuff_with_large_arrays();
+void flush(int * array);
+int getMinIndex(float * array, int size);
+int getMaxIndex(int * array, int size);
+int getMostCommonValue(int * array, int size);
 
-class secret{
-    private:
-        int secret_number;
-
-    public:    
-    int public_number;
-
-    secret(){
-        secret_number = 0x00000042;
-        public_number = 0x000000AB;
-        // This wasn't working properly but I could find out that secret_number and public_number are very close together in memory (one byte apart)
-        // std::cout << std::endl;
-        // std::cout << "secret number            : " << secret_number << std::endl;
-        // std::cout << "address of secret number : " << &secret_number << std::endl;
-        // printf("%c\n", secret_number);
-        // printf("%c\n", public_number);
-        // printf("%08x\n", &secret_number); // these two where the only ones that worked
-        // printf("%08x\n", &public_number); // these two where the only ones that worked
-        // std::cout << "public number            : " << public_number << std::endl;
-        // std::cout << "address of public number : " << &public_number << std::endl;
-    }
-};
-
-void call_attempt_access(int * ptr){
-    char command[10] = ""; 
-    strcat(command, "attempt_access.exe ");
-
-    std::stringstream ss;
-    ss << ptr;  
-    std::string address = ss.str();
-
-    strcat(command, (address.c_str()));
-    
-    int status = system(command);  // gives a segmentation fault (returns -1073741819) if called with for example 0
-
-    if (status == -1073741819){
-        std::cout << "Segmentation fault. Invalid address.\n \n";
-    }
-}
 
 int main(){
+    srand (time(NULL));
     printf("\n\n");
     printf("--------------------------------\n");
     printf("START\n");
     printf("--------------------------------\n");
     printf("\n\n");
 
-    /////////////////////////////////////////////////////////
-    // Create shared memory
-    boost::interprocess::shared_memory_object shared_memory(
-        boost::interprocess::open_or_create, 
-        "shared_memory", 
-        boost::interprocess::read_write
-    );
-    // Set size
-    shared_memory.truncate(8);
 
-    printf("Created shared memory. \n \n");
-
-    // Map the shared_memory in this process
-    boost::interprocess::mapped_region region(shared_memory, boost::interprocess::read_write);
-
-    // Reset memory to all ones
-    std::memset(region.get_address(), 16, region.get_size());
+    printf("----------------------------------------------------------------\n");
+    printf("Let's play around with the cache \n \n");
+    StartCounter();
+    garbage_bag[rand()] = rand();
+    std::cout << EndCounter() << " ignore this line" << std::endl; // reset counter. somehow necessary and for some reason needs to be printed to work  ¯\_(ツ)_/¯
 
 
-    printf("Mapped shared memory in main process. \n \n");
+    int playground [size];     // playground is now a pointer to the first element
 
-    // TO PRINT ALL MEMORY
-    char *mem = static_cast<char*>(region.get_address());
-    for(std::size_t i = 0; i < region.get_size(); ++i){
-        printf("%08x: %08x\n", mem, *mem);
-        mem++;
+    for(int i = 0; i < size; i++){playground[i] = rand();} // initialise
+
+
+    volatile int index1 = size/10;
+    volatile int index2 = size/3; 
+
+    flush(playground);
+    std::cout << "\nFlushed the cache.\n" << std::endl;
+
+    StartCounter();
+    garbage_bag[rand()] = playground[index1];
+    std::cout << "Expected cache miss: " << EndCounter() << std::endl;
+
+    garbage_bag[rand()] = playground[index1];
+    garbage_bag[rand()] = playground[index1];
+
+    StartCounter();
+    garbage_bag[rand()] = playground[index1];
+    std::cout << "Expected cache hit : " << EndCounter() << std::endl;
+
+
+    flush(playground);
+    std::cout << "\nFlushed the cache.\n" << std::endl;
+
+
+    StartCounter();    
+    garbage_bag[rand()] = playground[index2];
+    std::cout << "Expected cache miss: " << EndCounter() << std::endl;
+
+    garbage_bag[rand()] = playground[index2];
+    garbage_bag[rand()] = playground[index2];
+
+    StartCounter();
+    garbage_bag[rand()] = playground[index2];
+    std::cout << "Expected cache hit : " << EndCounter() << std::endl;
+
+    printf("\nSo the difference is there but not always. (Rerun a couple of times.) \nSo the cache is hard to trick and unpredictable.\n");
+
+    printf("-----------------------------------------------------\n");
+
+    printf("Now, let's try to see if we can recreate a secret value from that.\n");
+
+
+    volatile int secret = rand()%secret_max;  
+    std::cout << "Created random secret number between 0 and " << secret_max << std::endl;
+
+
+    flush(playground);
+    std::cout << "\nFlushed the cache.\n" << std::endl;
+
+    const int reps = 20;
+    float times[secret_max];
+    int guesses[reps];
+    volatile float time;
+
+
+    for (volatile int round = 0; round < reps; round++){
+        flush(playground);
+
+        for (volatile int i = 0; i < secret_max; i++){ 
+            flush(playground);
+            garbage_bag[rand()] = playground[(secret+1)*4096*2]; // playground[0] tends to always be cached
+
+            StartCounter();
+            garbage_bag[rand()] = playground[(i+1)*4096*2];
+            time = EndCounter();
+            times[i] = time; //times[i] += time;
+        }
+
+        guesses[round] = getMinIndex(times, secret_max);
+        if(round == 0){
+            std::cout << "Example run" << std::endl;
+            std::cout << "Before each of these accesses we call [(secret+1)*81292].\nWe will never look at that value but we can reconstruct it, \nbecause we know that it will be in the cache." << std::endl;
+            for (int i = 0; i < secret_max; i++){
+                std::cout << "Accessing array at index [(" << i << "+1)*8192] took " << std::setw(12) << times[i] << " time units " << std::endl;
+            }
+            std::cout << "A shorter time means that it was most likely in the cache. " << std::endl;
+            std::cout << "So the best guess for the secret value this round is: " << guesses[round] << std::endl;
+            std::cout << "Now do this a couple more times to make it significant. " << std::endl;
+        } else {
+        std::cout << "Best guess this round: " << guesses[round] << std::endl;
+        }
+    }    
+    int prediction = getMostCommonValue(guesses, reps);
+    std::cout << "The best guess overall is : " << prediction << std::endl;
+    std::cout << "The real secret value is  : " << secret << std::endl;
+
+    if(prediction == secret){
+        std::cout<<"Yay!" << std::endl;
+    } else{
+        std::cout<<"Damn." << std::endl;
     }
-
-    printf("Region start: %08x \n", region.get_address());
-    printf("Region size:  %i   \n", region.get_size());
-    printf("Finished memory tests. \n \n");
-
-
-    /////////////////////////////////////////////////////////
-    int a          = 3;
-    int * a_ptr    = &a;
-    printf("a           : %08x\n", a);
-    printf("sizeof(a)   : %08x byte\n", sizeof(a));
-    printf("a_ptr       : %08x\n", a_ptr);
-    printf("*a_ptr      : %08x\n", *a_ptr);
-    printf("\n\n");
-
-    /////////////////////////////////////////////////////////
-
-    mem = static_cast<char*>(region.get_address());
-    for(std::size_t i = 0; i < region.get_size(); ++i){
-        printf("%08x: %08x\n", mem, *mem);
-        mem++;
-    }
-
-    /////////////////////////////////////////////////////////
-    secret s;
-    // now I won't be able to read secret_number
-    printf("public_number            : %08x \n", s.public_number);
-    printf("address of public_number : %08x \n", &s.public_number);
-    printf("I cannot access s.secret_number but I can access s.public_number and I would expect them to be close together in memory. \n");
-    // printf("public number: %08x \n", s.secret_number); // not working
-
-    printf("\n\n");
-    /////////////////////////////////////////////////////////
-
-    /////////////////////////////////////////////////////////
-
-    // attempt to read protected memory
-    call_attempt_access(a_ptr);
-
     
-    
-    // use it to calculate some memory location
-    // int * ptr = (int *)0x0060fe10;
+
+    printf("-----------------------------------------------------\n");
 
 
-
-    // time the cache 
-
-    // Delete shared memory
-    boost::interprocess::shared_memory_object::remove("shared_memory");
-    printf("Deleted shared memory. \n \n");
 
     printf("\n\n");
     printf("--------------------------------\n");
     printf("DONE\n");
     printf("--------------------------------\n");
 
+    volatile int sum = 0;
+    for (auto i : garbage_bag){
+        sum += i;
+    }
+    std::cout << sum;
+    
     return 0;
+
+}
+
+void do_stuff_with_large_arrays(){ 
+    // do stuff to "clear" the cache
+    const int size = 65536*2*2; 
+    volatile int trash [size];
+    trash[0] = 13;
+    for (volatile int i = 1; i < size; i++) {
+        trash[i] = (trash[i-1] * trash[i-1])%3400 + rand();
+    }
+    garbage_bag[rand()] = trash[size-1];
+}
+
+void flush(int * array){
+    volatile bool temp = rand()%2;
+    if(temp){
+        garbage_bag[rand()] = array[(rand()*4+1)%size];
+        garbage_bag[rand()] = array[(rand()*4+1)%size];
+        garbage_bag[rand()] = array[(rand()*4+1)%size];
+        garbage_bag[rand()] = array[(rand()*4+1)%size];
+        garbage_bag[rand()] = array[(rand()*4+1)%size];
+    } else{
+        garbage_bag[rand()] = array[(rand()*4)%size];
+        garbage_bag[rand()] = array[(rand()*4)%size];
+        garbage_bag[rand()] = array[(rand()*4)%size];
+        garbage_bag[rand()] = array[(rand()*4)%size];
+        garbage_bag[rand()] = array[(rand()*4)%size];
+    }
+    do_stuff_with_large_arrays();
+}
+
+int getMinIndex(float * array, int size){
+    int min = 0;
+    for (int i = 0; i < size; i++) {
+        if(array[i] < array[min]){
+            min = i;
+        }
+    }
+    return min;
+}
+int getMaxIndex(int * array, int size){
+    int max = 0;
+    for (int i = 0; i < size; i++) {
+        if(array[i] > array[max]){
+            max = i;
+        }
+    }
+    return max;
+}
+int getMostCommonValue(int * array, int size){
+    int counters[secret_max];
+
+    for(int i = 0; i < secret_max; i++){counters[i] = 0;}  // initialise
+    for(int i = 0; i < size; i++){counters[array[i]]++;}   // count
+
+    return getMaxIndex(counters, secret_max);
 }
