@@ -16,6 +16,6 @@ void StartCounter(){
 double EndCounter(){
     LARGE_INTEGER li;
     QueryPerformanceCounter(&li);
-    return float(li.QuadPart-CounterStart)/PCFreq;
+    return float((li.QuadPart-CounterStart)/PCFreq)*1e4;
 }
 

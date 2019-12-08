@@ -18,7 +18,12 @@ int getMaxIndex(int * array, int size);
 int getMostCommonValue(volatile int * array, int size);
 
 
-int main(){
+int main(){    
+    
+    StartCounter();
+    garbage_bag[rand()] = rand();
+    std::cout << EndCounter() << " ignore this line" << std::endl; // reset counter. somehow necessary and for some reason needs to be printed to work  ¯\_(ツ)_/¯
+
     printf("\n\n");
     printf("--------------------------------\n");
     printf("START\n");
@@ -28,55 +33,34 @@ int main(){
     srand (time(NULL));                                     // set new seed
     for(int i = 0; i < size; i++){playground[i] = rand();}  // initialise playground array
 
-    StartCounter();
-    garbage_bag[rand()] = rand();
-    std::cout << EndCounter() << " ignore this line" << std::endl; // reset counter. somehow necessary and for some reason needs to be printed to work  ¯\_(ツ)_/¯
+    std::cout << std::setprecision(3);  // set output float precision 
+
+
 
     printf("----------------------------------------------------------------\n");
-    printf("Let's play around with the cache \n \n");
-
+    std::cout << "Playing around with the cache" << std::endl << std::endl;
+    flush();
        
+    volatile int index = 50000;
+    std::cout << "First, I created a large array of size " << size << " and filled it with random integers. Let's check out an element somewhere in the middle of my big array at index " << index << " and see how long it takes:" << std::endl;
+    StartCounter();
+    std::cout << "array[" << index << "] = " << playground[index] << std::endl;
+    float time1 = EndCounter();
+    std::cout << "This took " << time1 << " time units" << std::endl << std::endl;
 
-
-    volatile int index1 = size/10;
-    volatile int index2 = size/3; 
-
-    flush();
-    std::cout << "\nFlushed the cache.\n" << std::endl;
+    std::cout << "Now, we expect this part of the array to be cached. So if we access it again it should be quicker. Let's try: " << std::endl;
 
     StartCounter();
-    garbage_bag[rand()] = playground[index1];
-    std::cout << "Expected cache miss: " << EndCounter() << std::endl;
-
-    garbage_bag[rand()] = playground[index1];
-    garbage_bag[rand()] = playground[index1];
-
-    StartCounter();
-    garbage_bag[rand()] = playground[index1];
-    std::cout << "Expected cache hit : " << EndCounter() << std::endl;
+    std::cout << "array[" << index << "] = " << playground[index] << std::endl;
+    float time2 = EndCounter();
+    std::cout << "This took " << time2 << " time units" << std::endl;
 
 
-    flush();
-    std::cout << "\nFlushed the cache.\n" << std::endl;
+    printf("\nSo the difference is there but not always. Try rerunning this a couple of times. I found that the second access is on average 3.5x faster. We can see that the effects of caching are definitely noticebale but quite hard to predict and reproduce. \n");
 
-
-    StartCounter();    
-    garbage_bag[rand()] = playground[index2];
-    std::cout << "Expected cache miss: " << EndCounter() << std::endl;
-
-    garbage_bag[rand()] = playground[index2];
-    garbage_bag[rand()] = playground[index2];
-
-    StartCounter();
-    garbage_bag[rand()] = playground[index2];
-    std::cout << "Expected cache hit : " << EndCounter() << std::endl;
-
-    printf("\nSo the difference is there but not always. (Rerun a couple of times.) \nSo the cache is hard to trick and unpredictable.\n");
 
     printf("-----------------------------------------------------\n");
-
-    printf("Now, let's try to see if we can recreate a secret value from that.\n");
-
+    std::cout << "Now, let's see if that is enough to indirectly infer a value by memory access timing." << std::endl << std::endl;
 
     volatile int secret = rand()%secret_max;  
     std::cout << "Created random secret number between 0 and " << secret_max << std::endl;
@@ -91,26 +75,26 @@ int main(){
     volatile float time;
 
     for (volatile int round = 0; round < reps; round++){
+        flush();
+        garbage_bag[rand()] = playground[(secret+1)*4096*2]; // playground[0] tends to always be cached
         for (volatile int i = 0; i < secret_max; i++){ 
-            flush();
-            garbage_bag[rand()] = playground[(secret+1)*4096*2]; // playground[0] tends to always be cached
-
             StartCounter();
             garbage_bag[rand()] = playground[(i+1)*4096*2];
             time = EndCounter();
             times[i] = time; //times[i] += time;
         }
-
         guesses[round] = getMinIndex(times, secret_max);
+        
         if(round == 0){
             std::cout << "Example run" << std::endl;
-            std::cout << "Before each of these accesses we call array[(secret+1)*81292] (The +1 is there because array[0] is almost always cached).\nWe will never look at that value but we can reconstruct it, \nbecause we know that it will be in the cache." << std::endl;
+            std::cout << "First, we call array[(secret+1)*81292] (The +1 is there because array[0] is almost always cached).\nWe will never look at that value directly but we can reconstruct it, because we know that it will be in the cache." << std::endl;
             for (int i = 0; i < secret_max; i++){
                 std::cout << "Accessing array[(" << i << "+1)*8192] took " << std::setw(12) << times[i] << " time units " << std::endl;
             }
-            std::cout << "A shorter time means that it was most likely in the cache. " << std::endl;
-            std::cout << "So the best guess for the secret value this round is: " << guesses[round] << std::endl;
-            std::cout << "Now do this a couple more times to make it significant. " << std::endl;
+            std::cout << "A shorter time means that it was most likely in the cache and we expect array[(secret+1)*81292] to be in the cache. " << std::endl;
+            std::cout << "So the best guess for the secret value this round is: " << guesses[round] << std::endl << std::endl;
+            
+            std::cout << "Now we can repeat this a couple more times to make it significant. " << std::endl;
             std::cout << "Best guesses: " << guesses[round] << " ";
         } else {
         std::cout << guesses[round] << " "; // not printing the guess results in more optimisation and worse predictions
@@ -141,7 +125,7 @@ int main(){
     for (auto i : garbage_bag){
         sum += i;
     }
-    std::cout << sum;
+    std::cout << sum << " ignore this line" << std::endl;
     
     return 0;
 
