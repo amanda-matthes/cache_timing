@@ -4,7 +4,7 @@ In this simple demo I show how one can indirectly access memory content by timin
 
 ## Demo output
 
-This is the output
+This is the output:
 
     --------------------------------
     START
@@ -18,21 +18,21 @@ This is the output
     filled it with random integers. Let's check out an
     element somewhere in the middle of my big array and
     see how long it takes:
-    array[50000] = 32157
-    This took 38.1 time units
+    array[50000] = 1527
+    This took 6.03 time units
 
     Now, we expect this part of the array to be cached.
     So if we access it again it should be quicker:
-    array[50000] = 32157
-    This took 3.5 time units
+    array[50000] = 1527
+    This took 3.9 time units
 
     So the difference is there but not always. Try re-
     running this a couple of times. I found that the
     second access is on average 3.5x faster. We can see
-    that the effects of caching are definitely noticebale
+    that the effects of caching are definitely noticebale        
     but quite hard to predict and reproduce.
 
-    -----------------------------------------------------        
+    -----------------------------------------------------
     Is this good enough to infer information by memory
     access timing?
 
@@ -54,31 +54,31 @@ This is the output
     In this simple example we know that secret is between        
     0 and 9 so we can try all the possibilities:
 
-    Accessing array[(0+1)*8192] took         4.66 time units     
-    Accessing array[(1+1)*8192] took    1.68e-008 time units     
-    Accessing array[(2+1)*8192] took    1.36e-008 time units     
-    Accessing array[(3+1)*8192] took    1.36e-008 time units     
-    Accessing array[(4+1)*8192] took     2.1e-009 time units     
-    Accessing array[(5+1)*8192] took    1.05e-009 time units     
-    Accessing array[(6+1)*8192] took    1.36e-008 time units     
-    Accessing array[(7+1)*8192] took    1.36e-008 time units     
-    Accessing array[(8+1)*8192] took    1.05e-009 time units     
-    Accessing array[(9+1)*8192] took            0 time units     
+    Accessing array[(0+1)*8192] took         6.55 time units     
+    Accessing array[(1+1)*8192] took    2.08e-009 time units     
+    Accessing array[(2+1)*8192] took    1.46e-008 time units     
+    Accessing array[(3+1)*8192] took    1.04e-009 time units     
+    Accessing array[(4+1)*8192] took    2.08e-009 time units     
+    Accessing array[(5+1)*8192] took    1.46e-008 time units     
+    Accessing array[(6+1)*8192] took    1.04e-009 time units     
+    Accessing array[(7+1)*8192] took    1.04e-009 time units     
+    Accessing array[(8+1)*8192] took    1.98e-008 time units     
+    Accessing array[(9+1)*8192] took    1.46e-008 time units     
 
     A shorter time means that it was most likely in the
     cache and we expect array[(secret+1)*81292] to be
     in the cache.
-    So the best guess for the secret value this round is: 9      
+    So the best guess for the secret value this round is: 3      
 
     Now we can repeat this a couple more times to make it        
     significant.
-    Best guesses: 9 3 3 3 3 3 1 3 1 3 3 3 3 0 3 3 2 3 8 3 3 1 3 0 2 1 3 3 3 1
+    Best guesses: 3 3 5 3 1 3 3 3 3 7 2 3 3 1 3 3 3 0 5 3 3 3 2 3 3 1 3 3 3 5
 
     The best guess overall is : 3
     The real secret value is  : 3
     Yay!
 
-    I found that this works ---% of the time
+    I found that this works over 95% of the time.
     -----------------------------------------------------        
 
 

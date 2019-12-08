@@ -111,7 +111,7 @@ int main(){
         std::cout<<"Damn." << std::endl << std::endl;
     }
     
-    std::cout << "I found that this works ---\% of the time." << std::endl;
+    std::cout << "I found that this works over 95\% of the time." << std::endl;
 
     printf("-----------------------------------------------------\n");
 
@@ -136,6 +136,10 @@ void flush(){
     const int size = 65536*2*2; 
     volatile int trash [size];
     trash[0] = 13;
+    for (volatile int i = 1; i < size; i++) {
+        trash[i] = (trash[i-1] * trash[i-1])%3400 + rand();
+    }
+    garbage_bag[rand()] = trash[size-1];
     for (volatile int i = 1; i < size; i++) {
         trash[i] = (trash[i-1] * trash[i-1])%3400 + rand();
     }
