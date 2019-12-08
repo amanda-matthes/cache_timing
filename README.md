@@ -89,6 +89,8 @@ This is the output
 ## Can this be used to read protected memory?
 ...
 
+## What this repo contains
+
 ## Things I learned...
 
 ### ... when I was trying to create a value that is actually secret
