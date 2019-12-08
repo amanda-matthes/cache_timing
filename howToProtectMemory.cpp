@@ -64,7 +64,7 @@ int main(){
     printf("--------------------------------\n");
     return 0;
 
-    int playground [2048];  // for some reason the program crashes without this line, even though it's after the return statement. Maybe it needs to look like we are going to need some amount of memory before VirtualProtect works. But wouldn't the compiler optimise this line away? 
+    int playground [2048];  // for some reason the program crashes without this line, even though it's after the return statement. Maybe it needs to look like we are going to need some amount of memory before VirtualProtect works. But wouldn't the compiler optimise this line away anyway? 
 }
 
 
