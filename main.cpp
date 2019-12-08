@@ -37,18 +37,18 @@ int main(){
 
 
 
-    printf("----------------------------------------------------------------\n");
+    printf("-----------------------------------------------------\n");
     std::cout << "Playing around with the cache" << std::endl << std::endl;
     flush();
        
     volatile int index = 50000;
-    std::cout << "First, I created a large array of size " << size << " and filled it with random integers. Let's check out an element somewhere in the middle of my big array at index " << index << " and see how long it takes:" << std::endl;
+    std::cout << "First, I created a large array of size " << size << " and\nfilled it with random integers. Let's check out an\nelement somewhere in the middle of my big array and\nsee how long it takes:" << std::endl;
     StartCounter();
     std::cout << "array[" << index << "] = " << playground[index] << std::endl;
     float time1 = EndCounter();
     std::cout << "This took " << time1 << " time units" << std::endl << std::endl;
 
-    std::cout << "Now, we expect this part of the array to be cached. So if we access it again it should be quicker. Let's try: " << std::endl;
+    std::cout << "Now, we expect this part of the array to be cached.\nSo if we access it again it should be quicker:" << std::endl;
 
     StartCounter();
     std::cout << "array[" << index << "] = " << playground[index] << std::endl;
@@ -56,18 +56,18 @@ int main(){
     std::cout << "This took " << time2 << " time units" << std::endl;
 
 
-    printf("\nSo the difference is there but not always. Try rerunning this a couple of times. I found that the second access is on average 3.5x faster. We can see that the effects of caching are definitely noticebale but quite hard to predict and reproduce. \n");
-
+    printf("\nSo the difference is there but not always. Try re-\nrunning this a couple of times. I found that the\nsecond access is on average 3.5x faster. We can see\nthat the effects of caching are definitely noticebale\nbut quite hard to predict and reproduce. \n \n");
 
     printf("-----------------------------------------------------\n");
-    std::cout << "Now, let's see if that is enough to indirectly infer a value by memory access timing." << std::endl << std::endl;
+    std::cout << "Is this good enough to infer information by memory\naccess timing?" << std::endl << std::endl;
 
+    std::cout << "To answer this question, let's first create a simple\nsecret..." << std::endl;
     volatile int secret = rand()%secret_max;  
-    std::cout << "Created random secret number between 0 and " << secret_max << std::endl;
+    std::cout << "Created random secret number between 0 and " << secret_max << "." << std::endl << std::endl;
 
-
+    std::cout << "We should also make sure that nothing of interest is\ncached. To do that, we can simply do some calculations\nwith large arrays that will require lots of\ncache space..." << std::endl;
     flush();
-    std::cout << "\nFlushed the cache.\n" << std::endl;
+    std::cout << "Flushed the cache.\n" << std::endl;
 
     const int reps = 30;
     float times[secret_max];
@@ -86,35 +86,34 @@ int main(){
         guesses[round] = getMinIndex(times, secret_max);
         
         if(round == 0){
-            std::cout << "Example run" << std::endl;
-            std::cout << "First, we call array[(secret+1)*81292] (The +1 is there because array[0] is almost always cached).\nWe will never look at that value directly but we can reconstruct it, because we know that it will be in the cache." << std::endl;
+            std::cout << "First, we call array[(secret+1)*81292] (The +1 is\nthere because array[0] is almost always cached). We\nwill never look at secret directly but we can\nreconstruct it, because we know that it will be in\nthe cache." << std::endl;
+            std::cout << "In this simple example we know that secret is between\n0 and " << secret_max-1 << " so we can try all the possibilities:" << std::endl << std::endl; 
             for (int i = 0; i < secret_max; i++){
                 std::cout << "Accessing array[(" << i << "+1)*8192] took " << std::setw(12) << times[i] << " time units " << std::endl;
             }
-            std::cout << "A shorter time means that it was most likely in the cache and we expect array[(secret+1)*81292] to be in the cache. " << std::endl;
+            std::cout << std::endl << "A shorter time means that it was most likely in the\ncache and we expect array[(secret+1)*81292] to be\nin the cache. " << std::endl;
             std::cout << "So the best guess for the secret value this round is: " << guesses[round] << std::endl << std::endl;
-            
-            std::cout << "Now we can repeat this a couple more times to make it significant. " << std::endl;
+
+            std::cout << "Now we can repeat this a couple more times to make it\nsignificant. " << std::endl;
             std::cout << "Best guesses: " << guesses[round] << " ";
         } else {
         std::cout << guesses[round] << " "; // not printing the guess results in more optimisation and worse predictions
         }
     }    
     int prediction = getMostCommonValue(guesses, reps);
-    std::cout << std::endl;
+    std::cout << std::endl << std::endl;
     std::cout << "The best guess overall is : " << prediction << std::endl;
     std::cout << "The real secret value is  : " << secret << std::endl;
 
     if(prediction == secret){
-        std::cout<<"Yay!" << std::endl;
+        std::cout<<"Yay!" << std::endl << std::endl;
     } else{
-        std::cout<<"Damn." << std::endl;
+        std::cout<<"Damn." << std::endl << std::endl;
     }
     
+    std::cout << "I found that this works ---\% of the time." << std::endl;
 
     printf("-----------------------------------------------------\n");
-
-
 
     printf("\n\n");
     printf("--------------------------------\n");

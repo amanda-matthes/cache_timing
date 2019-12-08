@@ -4,54 +4,81 @@ In this simple demo I show how one can indirectly access memory content by timin
 
 ## Demo output
 
-This is the output::
+This is the output
 
     --------------------------------
     START
     --------------------------------
 
 
-    ---------------------------------------------------------------- 
+    -----------------------------------------------------
     Playing around with the cache
 
-    First, I created a large array of size 131072 and filled it with 
-    random integers. Let's check out an element somewhere in the middle of my big array at index 50000 and see how long it takes:     
-    array[50000] = 7492
-    This took 79.5 time units
+    First, I created a large array of size 131072 and
+    filled it with random integers. Let's check out an
+    element somewhere in the middle of my big array and
+    see how long it takes:
+    array[50000] = 32157
+    This took 38.1 time units
 
-    Now, we expect this part of the array to be cached. So if we access it again it should be quicker. Let's try:
-    array[50000] = 7492
-    This took 5.17 time units
+    Now, we expect this part of the array to be cached.
+    So if we access it again it should be quicker:
+    array[50000] = 32157
+    This took 3.5 time units
 
-    So the difference is there but not always. Try rerunning this a couple of times. I found that the second access is on average 3.5x faster. We can see that the effects of caching are definitely noticebale but quite hard to predict and reproduce. 
-    -----------------------------------------------------
-    Now, let's see if that is enough to indirectly infer a value by memory access timing.
+    So the difference is there but not always. Try re-
+    running this a couple of times. I found that the
+    second access is on average 3.5x faster. We can see
+    that the effects of caching are definitely noticebale
+    but quite hard to predict and reproduce.
 
-    Created random secret number between 0 and 10
+    -----------------------------------------------------        
+    Is this good enough to infer information by memory
+    access timing?
 
+    To answer this question, let's first create a simple
+    secret...
+    Created random secret number between 0 and 10.
+
+    We should also make sure that nothing of interest is
+    cached. To do that, we can simply do some calculations       
+    with large arrays that will require lots of
+    cache space...
     Flushed the cache.
 
-    Example run
-    First, we call array[(secret+1)*81292] (The +1 is there because ase array[0] is almost always cached).
-    We will never look at that value directly but we can reconstruct uct it, because we know that it will be in the cache.        
-    Accessing array[(0+1)*8192] took         29.4 time units       
-    Accessing array[(1+1)*8192] took    1.58e-008 time units       
-    Accessing array[(2+1)*8192] took    3.15e-009 time units       
-    Accessing array[(3+1)*8192] took    1.68e-008 time units       
-    Accessing array[(4+1)*8192] took    2.63e-008 time units       
-    Accessing array[(5+1)*8192] took    1.58e-008 time units       
-    Accessing array[(6+1)*8192] took    1.58e-008 time units       
-    Accessing array[(7+1)*8192] took    1.47e-008 time units       
-    Accessing array[(8+1)*8192] took    1.47e-008 time units       
-    Accessing array[(9+1)*8192] took    1.05e-009 time units       
-    A shorter time means that it was most likely in the cache and we  we expect array[(secret+1)*81292] to be in the cache.       
-    So the best guess for the secret value this round is: 9        
+    First, we call array[(secret+1)*81292] (The +1 is
+    there because array[0] is almost always cached). We
+    will never look at secret directly but we can
+    reconstruct it, because we know that it will be in
+    the cache.
+    In this simple example we know that secret is between        
+    0 and 9 so we can try all the possibilities:
 
-    Now we can repeat this a couple more times to make it significantcant.
-    Best guesses: 9 5 5 5 3 3 5 1 1 5 1 3 1 5 4 1 5 0 1 5 5 5 0 1 1 1 1 1 5 0 5 1
-    The best guess overall is : 5
-    The real secret value is  : 5
+    Accessing array[(0+1)*8192] took         4.66 time units     
+    Accessing array[(1+1)*8192] took    1.68e-008 time units     
+    Accessing array[(2+1)*8192] took    1.36e-008 time units     
+    Accessing array[(3+1)*8192] took    1.36e-008 time units     
+    Accessing array[(4+1)*8192] took     2.1e-009 time units     
+    Accessing array[(5+1)*8192] took    1.05e-009 time units     
+    Accessing array[(6+1)*8192] took    1.36e-008 time units     
+    Accessing array[(7+1)*8192] took    1.36e-008 time units     
+    Accessing array[(8+1)*8192] took    1.05e-009 time units     
+    Accessing array[(9+1)*8192] took            0 time units     
+
+    A shorter time means that it was most likely in the
+    cache and we expect array[(secret+1)*81292] to be
+    in the cache.
+    So the best guess for the secret value this round is: 9      
+
+    Now we can repeat this a couple more times to make it        
+    significant.
+    Best guesses: 9 3 3 3 3 3 1 3 1 3 3 3 3 0 3 3 2 3 8 3 3 1 3 0 2 1 3 3 3 1
+
+    The best guess overall is : 3
+    The real secret value is  : 3
     Yay!
+
+    I found that this works ---% of the time
     -----------------------------------------------------        
 
 
@@ -59,9 +86,10 @@ This is the output::
     DONE
     --------------------------------
 
+## Can this be used to read protected memory?
+...
 
 ## Things I learned...
-
 
 ### ... when I was trying to create a value that is actually secret
 - Private class members are not really private at all if you know their memory location (which turns out to be right next to the public ones)
