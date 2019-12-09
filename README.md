@@ -29,7 +29,7 @@ This is the output:
     So the difference is there but not always. Try re-
     running this a couple of times. I found that the
     second access is on average 3.5x faster. We can see
-    that the effects of caching are definitely noticebale        
+    that the effects of caching are definitely noticeable        
     but quite hard to predict and reproduce.
 
     -----------------------------------------------------
@@ -101,18 +101,19 @@ If there is no proper separation of virtual memory spaces and you have a rough i
 
 ### ... when I was trying to create a value that is actually secret
 - Private class members are not really private at all if you know their memory location (which turns out to be right next to the public ones)
-- VirtualProtect is an easy way to make memory actually private, but it will make all pages containing protected bytes private. This can cause very weird bugs. For example...
+- VirtualProtect is an easy way to make memory actually private, but it will make all pages containing affected bytes private. This can cause very weird bugs. For example, the page could also contain the pointer that you used to make that memory protected. So now, you cannot use the pointer to make it accessible again.
 
 ### ... when I was trying to recover from a Segmentation Fault after using a value that was actually secret
 - There is no (easy) way to somehow "catch" a seg fault. It will end your program
 - It is possible to share memory between processes using boost::interprocess
+- That way you can contain the memory access in a secondary process that can crash in case of a segmentation fault without losing the virtual memory
 
 ### ... when I was trying to time how accessing a value takes
-- All the "standard" ways to time things in C++ are very imprecise for this purpose. TODO give examples and explain what you did instead
-- Sometimes the only way to force the computer to use a value is to print it
-
+- All the "standard" ways to time things in C++ (ctime, chrono etc.) are too imprecise for this purpose. Instead, I ended up using the QueryPerformanceCounter which is less intuitive to use but very useful
+- Sometimes the only way to force the computer to access some value is to print it
 
 ### ... from the whole project
-- Compilers are really good at optimising code and are hard to predict without compiler knowledge
+- Compilers are really good at optimising code and are hard to predict
+- Caching behaviour is not easily predictable or reproducible
 - Making a variable volatile does not protect from all kinds of optimisation
 - Computers are weird and I love it
