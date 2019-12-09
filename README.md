@@ -111,7 +111,7 @@ If there is no proper separation of virtual memory spaces and you have a rough i
 - Sometimes the only way to force the computer to access some value is to print it
 
 ### ... from the whole project
-- Compilers are really good at optimising code and are hard to predict
+- Compilers are really good at optimising code and are hard to trick
 - Caching behaviour is not easily predictable or reproducible
 - Making a variable volatile does not protect from all kinds of optimisation
 - Computers are weird and I love it
