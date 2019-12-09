@@ -92,7 +92,7 @@ This is the output:
 - Other code that I did not end up using directly but is somewhat relevant:
     - "howToProtectMemory" is a simple demo of how to use "VirtualProtect" to make certain memory pages protected. I tried to use this to more closely mimic an actual exploit
     - "howToSharedMemory" shows how the boost library "interprocess" can be used to create virtual memory that can be shared across processes. I thought that I could use that to put the memory accesses in a separate process so that I could regain control after a segmentation fault
-    - "howToAttemptAccess" and "attempt_access" show how this subprocess idea can be implemented
+    - "howToAttemptAccess" and "attempt_access" show how this subprocess idea can be implemented. I did not end up using this approach in the main demo because it is much harder to control the cache if it is used from several processes
 
 ## Can this be used to read protected memory?
 If there is no proper separation of virtual memory spaces and you have a rough idea of where the interesting stuff is, yes. But it has become much harder on recent machines.
