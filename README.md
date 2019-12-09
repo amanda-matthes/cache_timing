@@ -4,8 +4,6 @@ In this simple demo I show how one can indirectly access memory content by timin
 
 ## Demo output
 
-This is the output:
-
     --------------------------------
     START
     --------------------------------
