@@ -108,7 +108,7 @@ If there is no proper separation of virtual memory spaces and you have a rough i
 - It is possible to share memory between processes using boost::interprocess
 - That way you can contain the memory access in a secondary process that can crash in case of a segmentation fault without losing the virtual memory
 
-### ... when I was trying to time how accessing a value takes
+### ... when I was trying to time how long accessing a value takes
 - All the "standard" ways to time things in C++ (ctime, chrono etc.) are too imprecise for this purpose. Instead, I ended up using the QueryPerformanceCounter which is less intuitive to use but very useful
 - Sometimes the only way to force the computer to access some value is to print it
 
