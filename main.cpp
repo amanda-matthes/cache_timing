@@ -4,7 +4,7 @@
 #include <ctime>
 #include "timing.hpp"
 
-const int secret_max    = 10; 
+const int secret_max    = 10;
 
 const long int size     = 65536*2;
 int playground [size];
@@ -23,7 +23,7 @@ int getMostCommonValue(volatile int * array, int size);
 int getNumberOfOccurrences(volatile int * guesses, int number);
 void plotGuesses(volatile int * guesses);
 
-int main(){    
+int main(){
     StartCounter();
     garbage_bag[rand()] = rand();
     std::cout << EndCounter() << " ignore this line" << std::endl; // reset counter. somehow necessary and for some reason needs to be printed to work  ¯\_(ツ)_/¯
@@ -36,13 +36,13 @@ int main(){
 
     for(int i = 0; i < size; i++){playground[i] = rand();}  // initialise playground array
 
-    std::cout << std::setprecision(3);  // set output float precision 
+    std::cout << std::setprecision(3);  // set output float precision
 
 
     printf("-----------------------------------------------------\n");
     std::cout << "Playing around with the cache" << std::endl << std::endl;
     flush();
-       
+
     volatile int index = 50000;
     std::cout << "First, I created a large array of size " << size << " and\nfilled it with random integers. Let's check out an\nelement somewhere in the middle of my big array and\nsee how long it takes:" << std::endl;
     StartCounter();
@@ -65,7 +65,7 @@ int main(){
 
     std::cout << "To answer this question, let's first create a simple\nsecret..." << std::endl;
     srand (time(NULL));                                     // set new seed
-    volatile int secret = ((int)rand())%secret_max;  
+    volatile int secret = ((int)rand())%secret_max;
     std::cout << secret << std::endl;
 
     std::cout << "Created random secret number between 0 and " << secret_max << "." << std::endl << std::endl;
@@ -80,22 +80,22 @@ int main(){
 
     for (volatile int round = 0; round < reps; round++){
         flush();
-        garbage_bag[rand()] = playground[(secret+1)*4096*2]; // playground[0] tends to always be cached
-        for (volatile int i = 0; i < secret_max; i++){ 
+        garbage_bag[rand()] = playground[(secret+1)*4096*2*2]; // playground[0] tends to always be cached
+        for (volatile int i = 0; i < secret_max; i++){
             StartCounter();
-            garbage_bag[rand()] = playground[(i+1)*4096*2];
+            garbage_bag[rand()] = playground[(i+1)*4096*2*2];
             time = EndCounter();
             times[i] = time; //times[i] += time;
         }
         guesses[round] = getMinIndex(times, secret_max);
-        
+
         if(round == 0){
-            std::cout << "First, we call array[(secret+1)*81292] (The +1 is\nthere because array[0] is almost always cached). We\nwill never look at secret directly but we can\nreconstruct it, because we know that it will be in\nthe cache." << std::endl;
-            std::cout << "In this simple example we know that secret is between\n0 and " << secret_max-1 << " so we can try all the possibilities:" << std::endl << std::endl; 
+            std::cout << "First, we call array[(secret+1)*16384] (The +1 is\nthere because array[0] is almost always cached). We\nwill never look at secret directly but we can\nreconstruct it, because we know that it will be in\nthe cache." << std::endl;
+            std::cout << "In this simple example we know that secret is between\n0 and " << secret_max-1 << " so we can try all the possibilities:" << std::endl << std::endl;
             for (int i = 0; i < secret_max; i++){
-                std::cout << "Accessing array[(" << i << "+1)*8192] took " << std::setw(12) << times[i] << " time units " << std::endl;
+                std::cout << "Accessing array[(" << i << "+1)*16384] took " << std::setw(12) << times[i] << " time units " << std::endl;
             }
-            std::cout << std::endl << "A shorter time means that it was most likely in the\ncache and we expect array[(secret+1)*81292] to be\nin the cache. " << std::endl;
+            std::cout << std::endl << "A shorter time means that it was most likely in the\ncache and we expect array[(secret+1)*16384] to be\nin the cache. " << std::endl;
             std::cout << "So the best guess for the secret value this round is: " << guesses[round] << std::endl << std::endl;
 
             std::cout << "Now we can repeat this a couple more times to make it\nsignificant. " << std::endl;
@@ -103,7 +103,7 @@ int main(){
         } else {
         std::cout << guesses[round] << " "; // not printing the guess results in more optimisation and worse predictions
         }
-    }    
+    }
     plotGuesses(guesses);
     int prediction = getMostCommonValue(guesses, reps);
     std::cout << std::endl << std::endl;
@@ -115,7 +115,7 @@ int main(){
     } else{
         std::cout<<"Damn." << std::endl << std::endl;
     }
-    
+
     std::cout << "The performance depends on the machine and other programs running concurrently." << std::endl;
 
     printf("-----------------------------------------------------\n");
@@ -130,7 +130,7 @@ int main(){
         sum += i;
     }
     std::cout << sum << " ignore this line" << std::endl;
-    
+
     return 0;
 
 }
@@ -138,7 +138,7 @@ int main(){
 
 void flush(){
     // Does lots of stuff to "clear" the cache.
-    const int size = 65536*2*2; 
+    const int size = 65536*2*2;
     volatile int trash [size];
     trash[0] = 13;
     for(volatile int j = 1; j < 20; j++){
@@ -153,13 +153,13 @@ void flush(){
 void plotGuesses(volatile int * guesses){ // plots a nice little histogram of the guesses
     std::cout << std::endl;
     std::cout << std::endl;
-    
+
     for (int i = 0; i < secret_max; i++){
         std::cout << i << " ";
         for (int j = 0; j < getNumberOfOccurrences(guesses, i); j++){
             std::cout << "#";
         }
-        
+
         std::cout << std::endl;
     }
 
