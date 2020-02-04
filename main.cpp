@@ -1,6 +1,7 @@
 // compile with g++ -std=c++11 -o main.exe main.cpp
 
 #include <iomanip>      // for std::setw
+#include <ctime>
 #include "timing.hpp"
 
 const int secret_max    = 10; 
@@ -9,17 +10,20 @@ const long int size     = 65536*2;
 int playground [size];
 
 
+const int reps = 50;
+
+
 volatile int garbage_bag[RAND_MAX]; // collects outputs to make sure that they do not get optimized away
 
-void do_stuff_with_large_arrays();
+
 void flush();
 int getMinIndex(float * array, int size);
 int getMaxIndex(int * array, int size);
 int getMostCommonValue(volatile int * array, int size);
-
+int getNumberOfOccurrences(volatile int * guesses, int number);
+void plotGuesses(volatile int * guesses);
 
 int main(){    
-    
     StartCounter();
     garbage_bag[rand()] = rand();
     std::cout << EndCounter() << " ignore this line" << std::endl; // reset counter. somehow necessary and for some reason needs to be printed to work  ¯\_(ツ)_/¯
@@ -30,11 +34,9 @@ int main(){
     printf("--------------------------------\n");
     printf("\n\n");
 
-    srand (time(NULL));                                     // set new seed
     for(int i = 0; i < size; i++){playground[i] = rand();}  // initialise playground array
 
     std::cout << std::setprecision(3);  // set output float precision 
-
 
 
     printf("-----------------------------------------------------\n");
@@ -62,14 +64,16 @@ int main(){
     std::cout << "Is this good enough to infer information by memory\naccess timing?" << std::endl << std::endl;
 
     std::cout << "To answer this question, let's first create a simple\nsecret..." << std::endl;
-    volatile int secret = rand()%secret_max;  
+    srand (time(NULL));                                     // set new seed
+    volatile int secret = ((int)rand())%secret_max;  
+    std::cout << secret << std::endl;
+
     std::cout << "Created random secret number between 0 and " << secret_max << "." << std::endl << std::endl;
 
     std::cout << "We should also make sure that nothing of interest is\ncached. To do that, we can simply do some calculations\nwith large arrays that will require lots of\ncache space..." << std::endl;
     flush();
     std::cout << "Flushed the cache.\n" << std::endl;
 
-    const int reps = 30;
     float times[secret_max];
     volatile int guesses[reps];
     volatile float time;
@@ -100,6 +104,7 @@ int main(){
         std::cout << guesses[round] << " "; // not printing the guess results in more optimisation and worse predictions
         }
     }    
+    plotGuesses(guesses);
     int prediction = getMostCommonValue(guesses, reps);
     std::cout << std::endl << std::endl;
     std::cout << "The best guess overall is : " << prediction << std::endl;
@@ -111,7 +116,7 @@ int main(){
         std::cout<<"Damn." << std::endl << std::endl;
     }
     
-    std::cout << "I found that this works over 95\% of the time." << std::endl;
+    std::cout << "The performance depends on the machine and other programs running concurrently." << std::endl;
 
     printf("-----------------------------------------------------\n");
 
@@ -136,20 +141,36 @@ void flush(){
     const int size = 65536*2*2; 
     volatile int trash [size];
     trash[0] = 13;
-    for (volatile int i = 1; i < size; i++) {
-        trash[i] = (trash[i-1] * trash[i-1])%3400 + rand();
+    for(volatile int j = 1; j < 20; j++){
+        for (volatile int i = 1; i < size; i++) {
+            trash[i] = (trash[i-1] * trash[i-1])%3400 + rand();
+            garbage_bag[rand()] = trash[size-1];
+        }
+        garbage_bag[rand()] = trash[size-1];
     }
-    garbage_bag[rand()] = trash[size-1];
-    for (volatile int i = 1; i < size; i++) {
-        trash[i] = (trash[i-1] * trash[i-1])%3400 + rand();
-    }
-    garbage_bag[rand()] = trash[size-1];
-    for (volatile int i = 1; i < size; i++) {
-        trash[i] = (trash[i-1] * trash[i-1])%3400 + rand();
-    }
-    garbage_bag[rand()] = trash[size-1];
 }
 
+void plotGuesses(volatile int * guesses){ // plots a nice little histogram of the guesses
+    std::cout << std::endl;
+    std::cout << std::endl;
+    
+    for (int i = 0; i < secret_max; i++){
+        std::cout << i << " ";
+        for (int j = 0; j < getNumberOfOccurrences(guesses, i); j++){
+            std::cout << "#";
+        }
+        
+        std::cout << std::endl;
+    }
+
+}
+int getNumberOfOccurrences(volatile int * guesses, int number){
+    int counter = 0;
+    for (int i = 0; i < reps; i++){
+        if(guesses[i] == number){counter++;}
+    }
+    return counter;
+}
 int getMinIndex(float * array, int size){
     // Returns the array index with the lowest value.
     int min = 0;
